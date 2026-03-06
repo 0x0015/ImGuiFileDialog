@@ -31,14 +31,12 @@ SOFTWARE.
 #ifdef __cplusplus
 
 #include <cstring>  // stricmp / strcasecmp
-#include <cstdarg>  // variadic
 #include <sstream>
 #include <iomanip>
 #include <ctime>
 #include <memory>
 #include <sys/stat.h>
 #include <cstdio>
-#include <cerrno>
 
 // this option need c++17
 #ifdef USE_STD_FILESYSTEM
@@ -116,6 +114,7 @@ SOFTWARE.
 #include <cstdlib>
 #include <algorithm>
 #include <iostream>
+#include <misc/cpp/imgui_stdlib.h>
 
 ///////////////////////////////
 // STB IMAGE LIBS
@@ -637,7 +636,7 @@ public:
         try {
             fs::path fpath(vFilePathName);
             // date
-            size_t len{};
+            //size_t len{};
             const auto lastWriteTime = fs::last_write_time(fpath);
             const auto sctp          = std::chrono::time_point_cast<std::chrono::system_clock::duration>(  //
                 lastWriteTime - fs::file_time_type::clock::now() + std::chrono::system_clock::now());
@@ -1003,39 +1002,6 @@ std::vector<std::string> IGFD::Utils::SplitStringToVector(const std::string& vTe
     return arr;
 }
 
-void IGFD::Utils::AppendToBuffer(char* vBuffer, size_t vBufferLen, const std::string& vStr) {
-    std::string st = vStr;
-    size_t len     = vBufferLen - 1u;
-    size_t slen    = strlen(vBuffer);
-
-    if (!st.empty() && st != "\n") {
-        IGFD::Utils::ReplaceString(st, "\n", "");
-        IGFD::Utils::ReplaceString(st, "\r", "");
-    }
-    vBuffer[slen]   = '\0';
-    std::string str = std::string(vBuffer);
-    // if (!str.empty()) str += "\n";
-    str += vStr;
-    if (len > str.size()) {
-        len = str.size();
-    }
-#ifdef _MSC_VER
-    strncpy_s(vBuffer, vBufferLen, str.c_str(), len);
-#else   // _MSC_VER
-    strncpy(vBuffer, str.c_str(), len);
-#endif  // _MSC_VER
-    vBuffer[len] = '\0';
-}
-
-void IGFD::Utils::ResetBuffer(char* vBuffer) {
-    vBuffer[0] = '\0';
-}
-
-void IGFD::Utils::SetBuffer(char* vBuffer, size_t vBufferLen, const std::string& vStr) {
-    ResetBuffer(vBuffer);
-    AppendToBuffer(vBuffer, vBufferLen, vStr);
-}
-
 std::string IGFD::Utils::LowerCaseString(const std::string& vString) {
     auto str = vString;
 
@@ -1203,7 +1169,7 @@ IGFD::FileStyle::FileStyle(const ImVec4& vColor, const std::string& vIcon, ImFon
 
 void IGFD::SearchManager::Clear() {
     searchTag.clear();
-    IGFD::Utils::ResetBuffer(searchBuffer);
+    searchBuffer.clear();
 }
 
 void IGFD::SearchManager::DrawSearchBar(FileDialogInternal& vFileDialogInternal) {
@@ -1217,7 +1183,7 @@ void IGFD::SearchManager::DrawSearchBar(FileDialogInternal& vFileDialogInternal)
     ImGui::Text(searchString);
     ImGui::SameLine();
     ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
-    bool edited = ImGui::InputText("##InputImGuiFileDialogSearchField", searchBuffer, MAX_FILE_DIALOG_NAME_BUFFER);
+    bool edited = ImGui::InputText("##InputImGuiFileDialogSearchField", &searchBuffer);
     if (ImGui::GetItemID() == ImGui::GetActiveID()) searchInputIsActive = true;
     ImGui::PopItemWidth();
     if (edited) {
@@ -2330,9 +2296,9 @@ void IGFD::FileManager::m_RemoveFileNameInSelection(const std::string& vFileName
     m_SelectedFileNames.erase(vFileName);
 
     if (m_SelectedFileNames.size() == 1) {
-        snprintf(fileNameBuffer, MAX_FILE_DIALOG_NAME_BUFFER, "%s", vFileName.c_str());
+        fileNameBuffer = vFileName;
     } else {
-        snprintf(fileNameBuffer, MAX_FILE_DIALOG_NAME_BUFFER, "%zu files Selected", m_SelectedFileNames.size());
+	fileNameBuffer = std::to_string(m_SelectedFileNames.size()) + " files Selected";
     }
 }
 
@@ -2343,9 +2309,9 @@ void IGFD::FileManager::m_AddFileNameInSelection(const std::string& vFileName, b
     m_SelectedFileNames.emplace(vFileName);
 
     if (m_SelectedFileNames.size() == 1) {
-        snprintf(fileNameBuffer, MAX_FILE_DIALOG_NAME_BUFFER, "%s", vFileName.c_str());
+	fileNameBuffer = vFileName;
     } else {
-        snprintf(fileNameBuffer, MAX_FILE_DIALOG_NAME_BUFFER, "%zu files Selected", m_SelectedFileNames.size());
+	fileNameBuffer = std::to_string(m_SelectedFileNames.size()) + " files Selected";
     }
 
     if (vSetLastSelectionFileName) {
@@ -2386,7 +2352,7 @@ void IGFD::FileManager::SetCurrentDir(const std::string& vPath) {
             if (m_CurrentPath.size() > 1 && m_CurrentPath[m_CurrentPath.size() - 1] == PATH_SEP) {
                 m_CurrentPath = m_CurrentPath.substr(0, m_CurrentPath.size() - 1);
             }
-            IGFD::Utils::SetBuffer(inputPathBuffer, MAX_PATH_BUFFER_SIZE, m_CurrentPath);
+	    inputPathBuffer = m_CurrentPath;
             m_CurrentPathDecomposition = IGFD::Utils::SplitStringToVector(m_CurrentPath, PATH_SEP, false);
 #ifdef _IGFD_UNIX_  // _IGFD_UNIX_ is _IGFD_WIN_ or APPLE
             m_CurrentPathDecomposition.insert(m_CurrentPathDecomposition.begin(), IGFD::Utils::GetPathSeparator());
@@ -2463,7 +2429,7 @@ void IGFD::FileManager::SetCurrentPath(const std::string& vCurrentPath) {
 
 void IGFD::FileManager::SetDefaultFileName(const std::string& vFileName) {
     dLGDefaultFileName = vFileName;
-    IGFD::Utils::SetBuffer(fileNameBuffer, MAX_FILE_DIALOG_NAME_BUFFER, vFileName);
+    fileNameBuffer = vFileName;
 }
 
 bool IGFD::FileManager::SelectDirectory(const std::shared_ptr<FileInfos>& vInfos) {
@@ -2587,7 +2553,7 @@ void IGFD::FileManager::SelectOrDeselectFileName(const FileDialogInternal& vFile
         }
     } else {
         m_SelectedFileNames.clear();
-        IGFD::Utils::ResetBuffer(fileNameBuffer);
+	fileNameBuffer.clear();
         m_AddFileNameInSelection(vInfos->fileNameExt, true);
     }
 }
@@ -2598,7 +2564,7 @@ void IGFD::FileManager::DrawDirectoryCreation(const FileDialogInternal& vFileDia
     if (IMGUI_BUTTON(createDirButtonString)) {
         if (!m_CreateDirectoryMode) {
             m_CreateDirectoryMode = true;
-            IGFD::Utils::ResetBuffer(directoryNameBuffer);
+	    directoryNameBuffer.clear();
         }
     }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip(buttonCreateDirString);
@@ -2607,7 +2573,7 @@ void IGFD::FileManager::DrawDirectoryCreation(const FileDialogInternal& vFileDia
         ImGui::SameLine();
 
         ImGui::PushItemWidth(100.0f);
-        ImGui::InputText("##DirectoryFileName", directoryNameBuffer, MAX_FILE_DIALOG_NAME_BUFFER);
+        ImGui::InputText("##DirectoryFileName", &directoryNameBuffer);
         ImGui::PopItemWidth();
 
         ImGui::SameLine();
@@ -2658,7 +2624,7 @@ void IGFD::FileManager::DrawPathComposer(const FileDialogInternal& vFileDialogIn
             if (!m_CurrentPathDecomposition.empty()) {
                 auto endIt    = m_CurrentPathDecomposition.end();
                 m_CurrentPath = ComposeNewPath(--endIt);
-                IGFD::Utils::SetBuffer(inputPathBuffer, MAX_PATH_BUFFER_SIZE, m_CurrentPath);
+		inputPathBuffer = m_CurrentPath;
             }
         }
     }
@@ -2676,7 +2642,7 @@ void IGFD::FileManager::DrawPathComposer(const FileDialogInternal& vFileDialogIn
 
         if (inputPathActivated) {
             ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
-            ImGui::InputText("##pathedition", inputPathBuffer, MAX_PATH_BUFFER_SIZE);
+            ImGui::InputText("##pathedition", &inputPathBuffer);
             ImGui::PopItemWidth();
         } else {
             int _id = 0;
@@ -2733,7 +2699,7 @@ void IGFD::FileManager::DrawPathComposer(const FileDialogInternal& vFileDialogIn
 
 void IGFD::FileManager::m_SetCurrentPath(std::vector<std::string>::iterator vPathIter) {
     m_CurrentPath = ComposeNewPath(vPathIter);
-    IGFD::Utils::SetBuffer(inputPathBuffer, MAX_PATH_BUFFER_SIZE, m_CurrentPath);
+    inputPathBuffer = m_CurrentPath;
     inputPathActivated = true;
 }
 
@@ -2868,6 +2834,8 @@ void IGFD::FileDialogInternal::configureDialog(const std::string& vKey, const st
     ResetForNewDialog();
     dLGkey   = vKey;
     dLGtitle = vTitle;
+    ImGuiContext& g = *GImGui;
+    openedImGuiFrameCount = g.FrameCount;
 
     // treatment
     if (m_DialogConfig.sidePane == nullptr) {
@@ -4095,7 +4063,7 @@ void IGFD::FileDialog::m_DisplayPathPopup(ImVec2 vSize) {
 
 bool IGFD::FileDialog::m_DrawOkButton() {
     auto& fdFile = m_FileDialogInternal.fileManager;
-    if ((m_FileDialogInternal.canWeContinue && strlen(fdFile.fileNameBuffer)) || //
+    if ((m_FileDialogInternal.canWeContinue && !fdFile.fileNameBuffer.empty()) || //
         (m_FileDialogInternal.getDialogConfig().flags & ImGuiFileDialogFlags_OptionalFileName)) { // optional
         if (IMGUI_BUTTON(okButtonString "##validationdialog", ImVec2(okButtonWidth, 0.0f)) || m_FileDialogInternal.isOk) {
             m_FileDialogInternal.isOk = true;
@@ -4169,7 +4137,10 @@ bool IGFD::FileDialog::m_DrawFooter() {
     if (m_FileDialogInternal.getDialogConfig().flags & ImGuiFileDialogFlags_ReadOnlyFileNameField) {
         flags |= ImGuiInputTextFlags_ReadOnly;
     }
-    if (ImGui::InputText("##FileName", fdFile.fileNameBuffer, MAX_FILE_DIALOG_NAME_BUFFER, flags)) {
+    if(ImGui::GetCurrentContext()->FrameCount == m_FileDialogInternal.openedImGuiFrameCount){//automatically select the text field when the dialog is opened
+	ImGui::SetKeyboardFocusHere();
+    }
+    if (ImGui::InputText("##FileName", &fdFile.fileNameBuffer, flags)) {
         m_FileDialogInternal.isOk = true;
     }
     if (ImGui::GetItemID() == ImGui::GetActiveID()) m_FileDialogInternal.fileInputIsActive = true;
@@ -4198,17 +4169,12 @@ bool IGFD::FileDialog::m_Selectable(int vRowIdx, const char* vLabel, bool vSelec
     return res;
 }
 
-void IGFD::FileDialog::m_SelectableItem(int vRowIdx, std::shared_ptr<FileInfos> vInfos, bool vSelected, const char* vFmt, ...) {
+void IGFD::FileDialog::m_SelectableItem(int vRowIdx, std::shared_ptr<FileInfos> vInfos, bool vSelected, const std::string& str) {
     if (!vInfos.use_count()) return;
 
     auto& fdi = m_FileDialogInternal.fileManager;
 
     static ImGuiSelectableFlags selectableFlags = ImGuiSelectableFlags_AllowDoubleClick | ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_SpanAvailWidth;
-
-    va_list args;
-    va_start(args, vFmt);
-    vsnprintf(fdi.variadicBuffer, MAX_FILE_DIALOG_NAME_BUFFER, vFmt, args);
-    va_end(args);
 
     float h = 0.0f;
 #ifdef USE_THUMBNAILS
@@ -4216,7 +4182,7 @@ void IGFD::FileDialog::m_SelectableItem(int vRowIdx, std::shared_ptr<FileInfos> 
         h = DisplayMode_ThumbailsList_ImageHeight;
     }
 #endif  // USE_THUMBNAILS
-    if (m_Selectable(vRowIdx, fdi.variadicBuffer, vSelected, selectableFlags, ImVec2(-1.0f, h))) {
+    if (m_Selectable(vRowIdx, str.c_str(), vSelected, selectableFlags, ImVec2(-1.0f, h))) {
         if (vInfos->fileType.isDir()) {
             // nav system, selectable cause open directory or select directory
             if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard) {

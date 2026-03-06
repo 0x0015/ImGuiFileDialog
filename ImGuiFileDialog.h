@@ -238,14 +238,6 @@ struct IGFD_Thumbnail_Info {
 #define defaultSortOrderThumbnails true
 #endif  // defaultSortOrderThumbnails
 
-#ifndef MAX_FILE_DIALOG_NAME_BUFFER
-#define MAX_FILE_DIALOG_NAME_BUFFER 1024
-#endif  // MAX_FILE_DIALOG_NAME_BUFFER
-
-#ifndef MAX_PATH_BUFFER_SIZE
-#define MAX_PATH_BUFFER_SIZE 1024
-#endif  // MAX_PATH_BUFFER_SIZE
-
 #ifndef EXT_MAX_LEVEL
 #define EXT_MAX_LEVEL 10U
 #endif  // EXT_MAX_LEVEL
@@ -368,7 +360,7 @@ public:
 class IGFD_API SearchManager {
 public:
     std::string searchTag;
-    char searchBuffer[MAX_FILE_DIALOG_NAME_BUFFER] = "";
+    std::string searchBuffer;
     bool searchInputIsActive                       = false;
 
 public:
@@ -563,10 +555,9 @@ public:
     bool inputPathActivated                               = false;  // show input for path edition
     bool devicesClicked                                   = false;  // event when a drive button is clicked
     bool pathClicked                                      = false;  // event when a path button was clicked
-    char inputPathBuffer[MAX_PATH_BUFFER_SIZE]            = "";     // input path buffer for imgui widget input text (displayed in palce of composer)
-    char variadicBuffer[MAX_FILE_DIALOG_NAME_BUFFER]      = "";     // called by m_SelectableItem
-    char fileNameBuffer[MAX_FILE_DIALOG_NAME_BUFFER]      = "";     // file name buffer in footer for imgui widget input text
-    char directoryNameBuffer[MAX_FILE_DIALOG_NAME_BUFFER] = "";     // directory name buffer (when in directory mode)
+    std::string inputPathBuffer = "";     // input path buffer for imgui widget input text (displayed in palce of composer)
+    std::string fileNameBuffer      = "";     // file name buffer in footer for imgui widget input text
+    std::string directoryNameBuffer = "";     // directory name buffer (when in directory mode)
     std::string headerFileName;                                     // detail view name of column file
     std::string headerFileType;                                     // detail view name of column type
     std::string headerFileSize;                                     // detail view name of column size
@@ -691,6 +682,7 @@ public:
     bool showDialog           = false;         // the dialog is shown
     ImVec2 dialogCenterPos    = ImVec2(0, 0);  // center pos for display the confirm overwrite dialog
     int lastImGuiFrameCount   = 0;             // to be sure than only one dialog displayed per frame
+    int openedImGuiFrameCount = 0;
     float footerHeight        = 0.0f;          // footer height
     bool canWeContinue        = true;          // events
     bool okResultToConfirm    = false;         // to confim if ok for OverWrite
@@ -1008,7 +1000,7 @@ protected:
     virtual bool m_DrawCancelButton();              // draw cancel button
     virtual void m_DrawSidePane(float vHeight);     // draw side pane
     virtual bool m_Selectable(int vRowIdx, const char* vLabel, bool vSelected, ImGuiSelectableFlags vFlags, const ImVec2& vSizeArg);
-    virtual void m_SelectableItem(int vRowIdx, std::shared_ptr<FileInfos> vInfos, bool vSelected, const char* vFmt, ...);  // draw a custom selectable behavior item
+    virtual void m_SelectableItem(int vRowIdx, std::shared_ptr<FileInfos> vInfos, bool vSelected, const std::string& str);  // draw a custom selectable behavior item
     virtual void m_drawColumnText(int vColIdx, const char* vFmt, const char* vLabel, bool vSelected, bool vHovered);
     virtual void m_rightAlignText(const char* text, const char* maxWidthText);  // align a text on right
     virtual void m_DrawFileListView(ImVec2 vSize);  // draw file list view (default mode)

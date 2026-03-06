@@ -10,7 +10,7 @@
 // if commented, you have two defualt interface, std::filesystem or dirent
 // #define USE_CUSTOM_FILESYSTEM
 // this options need c++17
-// #define USE_STD_FILESYSTEM
+#define USE_STD_FILESYSTEM
 
 /////////////////////////////////
 //// MISC ///////////////////////
@@ -20,9 +20,6 @@
 // if disabled the spacing is defined by the imgui theme
 // define the space between path buttons
 // #define CUSTOM_PATH_SPACING 2
-
-// #define MAX_FILE_DIALOG_NAME_BUFFER 1024
-// #define MAX_PATH_BUFFER_SIZE 1024
 
 /////////////////////////////////
 //// QUICK PATH /////////////////
@@ -79,8 +76,8 @@
 /////////////////////////////////
 
 // by ex you can quit the dialog by pressing the key excape
-// #define USE_DIALOG_EXIT_WITH_KEY
-// #define IGFD_EXIT_KEY ImGuiKey_Escape
+#define USE_DIALOG_EXIT_WITH_KEY
+#define IGFD_EXIT_KEY ImGuiKey_Escape
 
 /////////////////////////////////
 //// WIDGETS ////////////////////
